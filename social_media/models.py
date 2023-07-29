@@ -8,6 +8,24 @@ from django.utils.text import slugify
 from social_media_api import settings
 from user.models import User
 
+from imagekit.models import ProcessedImageField
+from imagekit.processors import ResizeToFit
+
+
+class BaseModel(models.Model):
+    """Base model for the application. Uses UUID for pk."""
+
+    id = models.UUIDField(
+        primary_key=True,
+        editable=False,
+        default=uuid.uuid4,
+    )
+
+    class Meta:
+        """Metadata."""
+
+        abstract = True
+
 
 def create_profile(sender, instance, created, **kwargs):
     if created:
@@ -28,6 +46,14 @@ def profile_picture_file_path(instance, filename):
     )
 
 
+def image_file_path(instance, filename):
+    _, extension = os.path.splitext(filename)
+    return os.path.join(
+        f"user-{instance.user.id}/images",
+        f"{slugify(instance.user.first_name)}-{slugify(instance.user.last_name)}-{uuid.uuid4()}.{extension}",
+    )
+
+
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     profile_picture = models.ImageField(
@@ -42,3 +68,33 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
+
+
+class Post(BaseModel):
+    """A photo posted by a user."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Created By",
+        on_delete=models.CASCADE,
+        related_name="posts",
+    )
+
+    content = models.TextField()
+    image = ProcessedImageField(
+        upload_to=image_file_path,
+        format="JPEG",
+        options={"quality": 90},
+        processors=[ResizeToFit(width=1200, height=1200)],
+        blank=True
+    )
+
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user}'s Post on {self.date_created}"
+
+    class Meta:
+
+        ordering = ["-date_created"]
