@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from social_media.models import Profile, Post
+from social_media.models import Profile, Post, Like, Comment
 
 
 class ProfileInline(admin.StackedInline):
@@ -8,3 +8,5 @@ class ProfileInline(admin.StackedInline):
 
 
 admin.site.register(Post)
+admin.site.register(Like)
+admin.site.register(Comment)

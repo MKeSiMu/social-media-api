@@ -71,7 +71,7 @@ class Profile(models.Model):
 
 
 class Post(BaseModel):
-    """A photo posted by a user."""
+    """A post posted by a user."""
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -93,7 +93,42 @@ class Post(BaseModel):
     date_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user}'s Post on {self.date_created}"
+        return f"{self.user}'s Post on {self.date_created} (Likes: {self.likes.count()}, Comments: {self.comments.count()})"
+
+    class Meta:
+
+        ordering = ["-date_created"]
+
+
+class Like(BaseModel):
+    """A 'like' on a post."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="likes")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="likes")
+
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user} Like"
+
+    class Meta:
+
+        unique_together = (("user", "post"),)
+        ordering = ["-date_created"]
+
+
+class Comment(BaseModel):
+    """A comment on a post."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comments")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")
+
+    content = models.TextField(max_length=2000)
+
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.content
 
     class Meta:
 
