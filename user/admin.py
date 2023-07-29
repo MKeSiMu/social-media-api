@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group
 from django.utils.translation import gettext as _
 
-
+from social_media.admin import ProfileInline
 from user.models import User
 
 
@@ -40,6 +40,7 @@ class UserAdmin(DjangoUserAdmin):
     list_display = ("email", "first_name", "last_name", "is_staff")
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
+    inlines = [ProfileInline]
 
 
 admin.site.unregister(Group)
