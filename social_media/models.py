@@ -42,7 +42,9 @@ def profile_picture_file_path(instance, filename):
     _, extension = os.path.splitext(filename)
     return os.path.join(
         f"user-{instance.user.id}/profile_photo",
-        f"{slugify(instance.user.first_name)}-{slugify(instance.user.last_name)}-{uuid.uuid4()}.{extension}",
+        f"{slugify(instance.user.first_name)}-"
+        f"{slugify(instance.user.last_name)}-"
+        f"{uuid.uuid4()}.{extension}",
     )
 
 
@@ -50,12 +52,18 @@ def image_file_path(instance, filename):
     _, extension = os.path.splitext(filename)
     return os.path.join(
         f"user-{instance.user.id}/images",
-        f"{slugify(instance.user.first_name)}-{slugify(instance.user.last_name)}-{uuid.uuid4()}.{extension}",
+        f"{slugify(instance.user.first_name)}-"
+        f"{slugify(instance.user.last_name)}-"
+        f"{uuid.uuid4()}.{extension}",
     )
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
     profile_picture = models.ImageField(
         default="default_profile_picture.png",
         upload_to=profile_picture_file_path,
@@ -65,6 +73,21 @@ class Profile(models.Model):
     follows = models.ManyToManyField(
         "self", related_name="followed_by", symmetrical=False, blank=True
     )
+
+    @property
+    def full_name(self):
+        """Returns the user's full name."""
+        return "%s %s" % (self.user.first_name, self.user.last_name)
+
+    @property
+    def num_follows(self):
+        """Returns the user followed other user number."""
+        return self.follows.count() - 1
+
+    @property
+    def num_followed_by(self):
+        """Returns the user followed by other user number."""
+        return self.followed_by.count() - 1
 
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
@@ -93,7 +116,11 @@ class Post(BaseModel):
     date_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user}'s Post on {self.date_created} (Likes: {self.likes.count()}, Comments: {self.comments.count()})"
+        return (
+            f"{self.user}'s Post on {self.date_created} "
+            f"(Likes: {self.likes.count()}, "
+            f"Comments: {self.comments.count()})"
+        )
 
     class Meta:
 
@@ -103,8 +130,16 @@ class Post(BaseModel):
 class Like(BaseModel):
     """A 'like' on a post."""
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="likes")
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="likes")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="likes"
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name="likes"
+    )
 
     date_created = models.DateTimeField(auto_now_add=True)
 
@@ -120,8 +155,16 @@ class Like(BaseModel):
 class Comment(BaseModel):
     """A comment on a post."""
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comments")
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name="comments"
+    )
 
     content = models.TextField(max_length=2000)
 
