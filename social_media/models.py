@@ -2,6 +2,7 @@ import os
 import uuid
 
 from django.db import models
+from django.db.models import Count
 from django.db.models.signals import post_save
 from django.utils.text import slugify
 
@@ -94,7 +95,7 @@ class Profile(models.Model):
 
 
 class HashTag(BaseModel):
-    name = models.CharField(max_length=65)
+    name = models.CharField(max_length=65, blank=False)
 
     def __str__(self):
         return self.name
@@ -116,18 +117,26 @@ class Post(BaseModel):
         format="JPEG",
         options={"quality": 90},
         processors=[ResizeToFit(width=1200, height=1200)],
-        blank=True
+        blank=True,
+        null=True
     )
     hashtag = models.ManyToManyField(HashTag, related_name="hashtags")
-
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
 
+    @property
+    def num_likes(self):
+        """Returns number of likes."""
+        return self.likes.count()
+
+    @property
+    def num_comments(self):
+        """Returns number of comments."""
+        return self.comments.count()
+
     def __str__(self):
         return (
-            f"{self.user}'s Post on {self.date_created} "
-            f"(Likes: {self.likes.count()}, "
-            f"Comments: {self.comments.count()})"
+            f"Post id: {self.id}, created: {self.date_created} "
         )
 
     class Meta:
@@ -152,7 +161,7 @@ class Like(BaseModel):
     date_created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user} Like"
+        return f"{self.user}"
 
     class Meta:
 
@@ -179,7 +188,7 @@ class Comment(BaseModel):
     date_created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.content
+        return f"{self.user}: {self.content}"
 
     class Meta:
 
