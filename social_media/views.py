@@ -1,9 +1,11 @@
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from social_media.models import Profile, Post, Like, Comment
+from social_media.permissions import IsOwnerOrReadOnly
 from social_media.serializers import (
     ProfileSerializer,
     ProfileListSerializer,
@@ -29,6 +31,7 @@ class ProfileViewSet(
 ):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly, )
 
     def get_queryset(self):
         queryset = self.queryset
@@ -143,6 +146,7 @@ class LikeViewSet(
 ):
     queryset = Like.objects.all()
     serializer_class = LikeSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
 
     def get_queryset(self):
         queryset = (
@@ -165,6 +169,7 @@ class LikeViewSet(
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
 
     def get_queryset(self):
         queryset = (
@@ -187,6 +192,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
 
     @staticmethod
     def _params_to_list(qs):
