@@ -1,10 +1,9 @@
-from rest_framework import viewsets, mixins, generics, status
-from rest_framework.authentication import TokenAuthentication
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from social_media.models import Profile, Post, Like, Comment
 from social_media.tasks import schedule_post_creation
@@ -12,7 +11,6 @@ from social_media.permissions import IsOwnerOrReadOnly
 from social_media.serializers import (
     ProfileSerializer,
     ProfileListSerializer,
-    # UpdateProfileSerializer,
     FollowUnfollowProfileSerializer,
     PostSerializer,
     PostDetailSerializer,
@@ -22,7 +20,7 @@ from social_media.serializers import (
     LikeUnlikePostSerializer,
     ProfileDetailSerializer,
     LikeDetailSerializer,
-    CommentDetailSerializer
+    CommentDetailSerializer,
 )
 
 
@@ -30,11 +28,14 @@ class ProfileViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
-    viewsets.GenericViewSet
+    viewsets.GenericViewSet,
 ):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly, )
+    permission_classes = (
+        IsAuthenticatedOrReadOnly,
+        IsOwnerOrReadOnly,
+    )
 
     def get_queryset(self):
         queryset = self.queryset
@@ -54,10 +55,9 @@ class ProfileViewSet(
 
         if self.action in ("list", "retrieve"):
             queryset = (
-                queryset
-                .select_related("user")
+                queryset.select_related("user")
                 .prefetch_related("follows", "followed_by")
-                # .exclude(user=self.request.user)
+                .exclude(user=self.request.user)
             )
             return queryset
 
@@ -75,33 +75,52 @@ class ProfileViewSet(
 
         return ProfileSerializer
 
-    @action(methods=["GET"], detail=False, url_path="user-followed-by")
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="user-followed-by",
+        permission_classes=[IsAuthenticated],
+    )
     def user_followed_by(self, request):
+        """Endpoint for get user followed by profiles"""
         return Response(
             ProfileListSerializer(
                 Profile.objects.select_related("user")
                 .get(user=request.user)
-                .followed_by
-                .select_related("user")
+                .followed_by.select_related("user")
                 .prefetch_related("followed_by", "follows")
-                .exclude(id=self.request.user.profile.id), many=True).data,
-            status=status.HTTP_200_OK
+                .exclude(id=self.request.user.profile.id),
+                many=True,
+            ).data,
+            status=status.HTTP_200_OK,
         )
 
-    @action(methods=["GET"], detail=False, url_path="user-follows")
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_path="user-follows",
+        permission_classes=[IsAuthenticated],
+    )
     def user_follows(self, request):
+        """Endpoint for get user follows profiles"""
         return Response(
             ProfileListSerializer(
                 Profile.objects.select_related("user")
                 .get(user=request.user)
-                .follows
-                .select_related("user")
+                .follows.select_related("user")
                 .prefetch_related("followed_by", "follows")
-                .exclude(id=self.request.user.profile.id), many=True).data,
-            status=status.HTTP_200_OK
+                .exclude(id=self.request.user.profile.id),
+                many=True,
+            ).data,
+            status=status.HTTP_200_OK,
         )
 
-    @action(methods=["POST"], detail=False, url_path="(?P<pk>[^/.]+)/follow-unfollow")
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="(?P<pk>[^/.]+)/follow-unfollow",
+        permission_classes=[IsAuthenticated],
+    )
     def follow_unfollow(self, request, pk):
         """Endpoint for follow/unfollow specific profile"""
         user_profile = request.user.profile
@@ -110,34 +129,39 @@ class ProfileViewSet(
         try:
             follow_profile.followed_by.get(user=user_profile.user)
         except follow_profile.DoesNotExist:
-
             user_profile.follows.add(follow_profile)
             return Response(
-                {
-                    'message': f"Now you are following "
-                               f"{follow_profile.user}"
-                },
-                status=status.HTTP_201_CREATED
+                {"message": f"Now you are following " f"{follow_profile.user}"},
+                status=status.HTTP_201_CREATED,
             )
 
         user_profile.follows.remove(follow_profile)
         return Response(
-            {
-                'message': f"You are no longer following "
-                           f"{follow_profile.user}"
-            },
-            status=status.HTTP_204_NO_CONTENT
+            {"message": f"You are no longer following " f"{follow_profile.user}"},
+            status=status.HTTP_204_NO_CONTENT,
         )
 
-
-# class ProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
-#     serializer_class = UpdateProfileSerializer
-#
-#     def get_object(self):
-#         return (
-#             Profile.objects.select_related("user")
-#             .get(user=self.request.user)
-#         )
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "username",
+                type=str,
+                description="Filter by username id(ex. ?username=admin)",
+            ),
+            OpenApiParameter(
+                "first_name",
+                type=str,
+                description="Filter by user first_name id(ex. ?first_name=maks)",
+            ),
+            OpenApiParameter(
+                "last_name",
+                type=str,
+                description="Filter by user last_name id(ex. ?last_name=maksimov)",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class LikeViewSet(
@@ -145,17 +169,18 @@ class LikeViewSet(
     mixins.RetrieveModelMixin,
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
+    viewsets.GenericViewSet,
 ):
     queryset = Like.objects.all()
     serializer_class = LikeSerializer
-    permission_classes = (IsAuthenticated, IsOwnerOrReadOnly,)
+    permission_classes = (
+        IsAuthenticated,
+        IsOwnerOrReadOnly,
+    )
 
     def get_queryset(self):
-        queryset = (
-            self.queryset
-            .select_related("user", "post")
-            .filter(user=self.request.user)
+        queryset = self.queryset.select_related("user", "post").filter(
+            user=self.request.user
         )
         return queryset
 
@@ -172,13 +197,14 @@ class LikeViewSet(
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthenticated, IsOwnerOrReadOnly,)
+    permission_classes = (
+        IsAuthenticated,
+        IsOwnerOrReadOnly,
+    )
 
     def get_queryset(self):
-        queryset = (
-            self.queryset
-            .select_related("user", "post")
-            .filter(user=self.request.user)
+        queryset = self.queryset.select_related("user", "post").filter(
+            user=self.request.user
         )
         return queryset
 
@@ -195,7 +221,10 @@ class CommentViewSet(viewsets.ModelViewSet):
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = (IsAuthenticated, IsOwnerOrReadOnly,)
+    permission_classes = (
+        IsAuthenticated,
+        IsOwnerOrReadOnly,
+    )
 
     def create(self, request, *args, **kwargs):
         if request.user.is_authenticated:
@@ -206,19 +235,17 @@ class PostViewSet(viewsets.ModelViewSet):
             hashtags_data = serializer.validated_data.get("hashtag", [])
 
             if schedule_create:
-
                 schedule_post_creation.apply_async(
                     args=[
                         serializer.validated_data["content"],
                         serializer.validated_data["image"],
                         hashtags_data,
-                        request.user.id
+                        request.user.id,
                     ],
-                    eta=schedule_create
+                    eta=schedule_create,
                 )
                 return Response(
-                    {"detail": "Post scheduled for creation"},
-                    status.HTTP_201_CREATED
+                    {"detail": "Post scheduled for creation"}, status.HTTP_201_CREATED
                 )
             else:
                 serializer.save(user=request.user)
@@ -226,7 +253,7 @@ class PostViewSet(viewsets.ModelViewSet):
         else:
             return Response(
                 {"detail": "You must be logged in to create post"},
-                status.HTTP_403_FORBIDDEN
+                status.HTTP_403_FORBIDDEN,
             )
 
     @staticmethod
@@ -241,25 +268,19 @@ class PostViewSet(viewsets.ModelViewSet):
 
         if hashtags:
             hashtag_list = self._params_to_list(hashtags)
-            queryset = (
-                queryset
-                .filter(hashtag__name__in=hashtag_list)
-            )
+            queryset = queryset.filter(hashtag__name__in=hashtag_list)
 
         if self.action == "list":
             queryset = (
-                queryset
-                .select_related("user")
+                queryset.select_related("user")
                 .prefetch_related("comments", "likes", "hashtag")
                 .filter(user__profile__in=self.request.user.profile.follows.all())
             )
             return queryset
 
         if self.action == "retrieve":
-            queryset = (
-                queryset
-                .select_related("user")
-                .prefetch_related("comments__user", "likes__user", "hashtag")
+            queryset = queryset.select_related("user").prefetch_related(
+                "comments__user", "likes__user", "hashtag"
             )
             return queryset
 
@@ -280,7 +301,12 @@ class PostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    @action(methods=["POST"], detail=False, url_path="(?P<pk>[^/.]+)/like-unlike")
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_path="(?P<pk>[^/.]+)/like-unlike",
+        permission_classes=[IsAuthenticated],
+    )
     def like_unlike(self, request, pk):
         """Endpoint for like/unlike specific post"""
         post = get_object_or_404(Post.objects.select_related("user"), pk=pk)
@@ -292,17 +318,19 @@ class PostViewSet(viewsets.ModelViewSet):
             post.likes.add(like)
             return Response(
                 {
-                    'message': f"You liked "
-                               f"{post.user.first_name} {post.user.last_name}'s post"
+                    "message": f"You liked "
+                    f"{post.user.first_name} {post.user.last_name}'s post"
                 },
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
 
-        Like.objects.select_related("user").get(user=self.request.user, post=post).delete()
+        Like.objects.select_related("user").get(
+            user=self.request.user, post=post
+        ).delete()
         return Response(
             {
-                'message': f"You unliked "
-                           f"{post.user.first_name} {post.user.last_name}'s post"
+                "message": f"You unliked "
+                f"{post.user.first_name} {post.user.last_name}'s post"
             },
-            status=status.HTTP_204_NO_CONTENT
+            status=status.HTTP_204_NO_CONTENT,
         )
