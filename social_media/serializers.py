@@ -1,16 +1,14 @@
 from rest_framework import serializers
 
 from social_media.models import Profile, Post, HashTag, Like, Comment
-from social_media.tasks import schedule_post_creation
 from user.models import User
 from user.serializers import UserSerializer
 
 
 class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
-    first_name = serializers.CharField(
-        source="user.first_name",
-        read_only=True
+    first_name = (
+        serializers.CharField(source="user.first_name", read_only=True)
     )
     last_name = serializers.CharField(source="user.last_name", read_only=True)
 
@@ -26,12 +24,11 @@ class ProfileSerializer(serializers.ModelSerializer):
             "bio",
             "location",
             "num_follows",
-            "num_followed_by"
+            "num_followed_by",
         )
 
 
 class ProfileListSerializer(ProfileSerializer):
-
     class Meta:
         model = Profile
         fields = (
@@ -42,7 +39,7 @@ class ProfileListSerializer(ProfileSerializer):
             "full_name",
             "profile_picture",
             "num_follows",
-            "num_followed_by"
+            "num_followed_by",
         )
 
 
@@ -62,9 +59,10 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
         if user_serializer.is_valid():
             user_serializer.update(user, user_data)
         instance.save()
-        return super(
-            ProfileDetailSerializer, self
-        ).update(instance, validated_data)
+        return (
+            super(ProfileDetailSerializer, self)
+            .update(instance, validated_data)
+        )
 
 
 class FollowUnfollowProfileSerializer(serializers.ModelSerializer):
@@ -73,37 +71,13 @@ class FollowUnfollowProfileSerializer(serializers.ModelSerializer):
         fields = ()
 
 
-# class UpdateProfileSerializer(serializers.ModelSerializer):
-#     user = UserSerializer(required=True, many=False)
-#
-#     class Meta:
-#         model = Profile
-#         fields = ("user", "profile_picture", "bio", "location")
-#
-#     def update(self, instance, validated_data):
-#         user_data = validated_data.pop('user')
-#         user_email = self.data['user']['email']
-#         user = User.objects.get(email=user_email)
-#
-#         user_serializer = UserSerializer(data=user_data)
-#         if user_serializer.is_valid():
-#             user_serializer.update(user, user_data)
-#         instance.save()
-#         return super(
-#             UpdateProfileSerializer, self
-#         ).update(instance, validated_data)
-
-
 class HashTagSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = HashTag
         fields = ("name",)
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    # post = serializers.CharField(source="post.id", required=False)
-
     class Meta:
         model = Comment
         fields = ("id", "post", "content")
@@ -111,7 +85,6 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class PostSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Post
         fields = (
@@ -123,7 +96,10 @@ class PostSerializer(serializers.ModelSerializer):
             "date_created",
             "date_updated",
         )
-        read_only_fields = ("id", "user",)
+        read_only_fields = (
+            "id",
+            "user",
+        )
 
 
 class PostListSerializer(PostSerializer):
@@ -144,7 +120,10 @@ class PostListSerializer(PostSerializer):
             "date_updated",
             "schedule_create",
         )
-        read_only_fields = ("id", "user",)
+        read_only_fields = (
+            "id",
+            "user",
+        )
 
     def create(self, validated_data):
         hashtags_data = validated_data.pop("hashtag")
@@ -166,7 +145,11 @@ class PostListSerializer(PostSerializer):
 
 
 class PostDetailSerializer(serializers.ModelSerializer):
-    likes = serializers.StringRelatedField(many=True, read_only=True, required=False)
+    likes = serializers.StringRelatedField(
+        many=True,
+        read_only=True,
+        required=False
+    )
     comments = CommentSerializer(many=True, read_only=True)
     hashtag = HashTagSerializer(many=True, required=False)
 
@@ -208,7 +191,6 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
 
 class LikeUnlikePostSerializer(PostDetailSerializer):
-
     class Meta:
         model = Post
         fields = ()
@@ -219,7 +201,10 @@ class LikeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Like
-        fields = ("id", "post",)
+        fields = (
+            "id",
+            "post",
+        )
         read_only_fields = ("id",)
 
 
@@ -229,7 +214,10 @@ class LikeDetailSerializer(LikeSerializer):
     class Meta:
         model = Like
         fields = ("id", "post", "date_created")
-        read_only_fields = ("id", "post",)
+        read_only_fields = (
+            "id",
+            "post",
+        )
 
 
 class CommentDetailSerializer(CommentSerializer):
@@ -238,4 +226,7 @@ class CommentDetailSerializer(CommentSerializer):
     class Meta:
         model = Comment
         fields = ("id", "post", "content", "date_created")
-        read_only_fields = ("id", "post",)
+        read_only_fields = (
+            "id",
+            "post",
+        )

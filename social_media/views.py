@@ -2,7 +2,10 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.permissions import (
+    IsAuthenticatedOrReadOnly,
+    IsAuthenticated
+)
 from rest_framework.response import Response
 
 from social_media.models import Profile, Post, Like, Comment
@@ -131,13 +134,15 @@ class ProfileViewSet(
         except follow_profile.DoesNotExist:
             user_profile.follows.add(follow_profile)
             return Response(
-                {"message": f"Now you are following " f"{follow_profile.user}"},
+                {"message": f"Now you are following "
+                            f"{follow_profile.user}"},
                 status=status.HTTP_201_CREATED,
             )
 
         user_profile.follows.remove(follow_profile)
         return Response(
-            {"message": f"You are no longer following " f"{follow_profile.user}"},
+            {"message": f"You are no longer following "
+                        f"{follow_profile.user}"},
             status=status.HTTP_204_NO_CONTENT,
         )
 
@@ -146,17 +151,21 @@ class ProfileViewSet(
             OpenApiParameter(
                 "username",
                 type=str,
-                description="Filter by username id(ex. ?username=admin)",
+                description="Filter by username (ex. ?username=admin)",
             ),
             OpenApiParameter(
                 "first_name",
                 type=str,
-                description="Filter by user first_name id(ex. ?first_name=maks)",
+                description=(
+                        "Filter by user first_name (ex. ?first_name=maks)"
+                ),
             ),
             OpenApiParameter(
                 "last_name",
                 type=str,
-                description="Filter by user last_name id(ex. ?last_name=maksimov)",
+                description=(
+                        "Filter by user last_name (ex. ?last_name=maksimov)"
+                ),
             ),
         ]
     )
@@ -231,7 +240,9 @@ class PostViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
 
-            schedule_create = serializer.validated_data.pop("schedule_create", None)
+            schedule_create = (
+                serializer.validated_data.pop("schedule_create", None)
+            )
             hashtags_data = serializer.validated_data.get("hashtag", [])
 
             if schedule_create:
@@ -245,7 +256,8 @@ class PostViewSet(viewsets.ModelViewSet):
                     eta=schedule_create,
                 )
                 return Response(
-                    {"detail": "Post scheduled for creation"}, status.HTTP_201_CREATED
+                    {"detail": "Post scheduled for creation"},
+                    status.HTTP_201_CREATED
                 )
             else:
                 serializer.save(user=request.user)
@@ -274,7 +286,9 @@ class PostViewSet(viewsets.ModelViewSet):
             queryset = (
                 queryset.select_related("user")
                 .prefetch_related("comments", "likes", "hashtag")
-                .filter(user__profile__in=self.request.user.profile.follows.all())
+                .filter(
+                    user__profile__in=self.request.user.profile.follows.all()
+                )
             )
             return queryset
 

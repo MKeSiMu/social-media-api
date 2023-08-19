@@ -2,7 +2,6 @@ import os
 import uuid
 
 from django.db import models
-from django.db.models import Count
 from django.db.models.signals import post_save
 from django.utils.text import slugify
 
@@ -118,7 +117,7 @@ class Post(BaseModel):
         options={"quality": 90},
         processors=[ResizeToFit(width=1200, height=1200)],
         blank=True,
-        null=True
+        null=True,
     )
     hashtag = models.ManyToManyField(HashTag, related_name="hashtags")
     date_created = models.DateTimeField(auto_now_add=True)
@@ -136,12 +135,9 @@ class Post(BaseModel):
         return self.comments.count()
 
     def __str__(self):
-        return (
-            f"Post id: {self.id}, created: {self.date_created} "
-        )
+        return f"Post id: {self.id}, created: {self.date_created} "
 
     class Meta:
-
         ordering = ["-date_created"]
 
 
@@ -165,7 +161,6 @@ class Like(BaseModel):
         return f"{self.user}"
 
     class Meta:
-
         unique_together = (("user", "post"),)
         ordering = ["-date_created"]
 
@@ -192,5 +187,4 @@ class Comment(BaseModel):
         return f"{self.user}: {self.content}"
 
     class Meta:
-
         ordering = ["-date_created"]
