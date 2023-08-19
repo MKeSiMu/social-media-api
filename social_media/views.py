@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from social_media.models import Profile, Post, Like, Comment
+from social_media.tasks import schedule_post_creation
 from social_media.permissions import IsOwnerOrReadOnly
 from social_media.serializers import (
     ProfileSerializer,
@@ -193,6 +194,38 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly,)
+
+    def create(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            schedule_create = serializer.validated_data.pop("schedule_create", None)
+            hashtags_data = serializer.validated_data.get("hashtag", [])
+
+            if schedule_create:
+
+                schedule_post_creation.apply_async(
+                    args=[
+                        serializer.validated_data["content"],
+                        serializer.validated_data["image"],
+                        hashtags_data,
+                        request.user.id
+                    ],
+                    eta=schedule_create
+                )
+                return Response(
+                    {"detail": "Post scheduled for creation"},
+                    status.HTTP_201_CREATED
+                )
+            else:
+                serializer.save(user=request.user)
+                return Response(serializer.data, status.HTTP_201_CREATED)
+        else:
+            return Response(
+                {"detail": "You must be logged in to create post"},
+                status.HTTP_403_FORBIDDEN
+            )
 
     @staticmethod
     def _params_to_list(qs):

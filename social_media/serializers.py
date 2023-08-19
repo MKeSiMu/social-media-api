@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from social_media.models import Profile, Post, HashTag, Like, Comment
+from social_media.tasks import schedule_post_creation
 from user.models import User
 from user.serializers import UserSerializer
 
@@ -120,7 +121,7 @@ class PostSerializer(serializers.ModelSerializer):
             "image",
             "hashtag",
             "date_created",
-            "date_updated"
+            "date_updated",
         )
         read_only_fields = ("id", "user",)
 
@@ -140,7 +141,8 @@ class PostListSerializer(PostSerializer):
             "num_likes",
             "num_comments",
             "date_created",
-            "date_updated"
+            "date_updated",
+            "schedule_create",
         )
         read_only_fields = ("id", "user",)
 

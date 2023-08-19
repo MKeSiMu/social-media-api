@@ -123,6 +123,7 @@ class Post(BaseModel):
     hashtag = models.ManyToManyField(HashTag, related_name="hashtags")
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
+    schedule_create = models.DateTimeField(blank=True, null=True)
 
     @property
     def num_likes(self):
