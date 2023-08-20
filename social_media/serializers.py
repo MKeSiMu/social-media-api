@@ -7,9 +7,7 @@ from user.serializers import UserSerializer
 
 class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
-    first_name = (
-        serializers.CharField(source="user.first_name", read_only=True)
-    )
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
     last_name = serializers.CharField(source="user.last_name", read_only=True)
 
     class Meta:
@@ -59,10 +57,7 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
         if user_serializer.is_valid():
             user_serializer.update(user, user_data)
         instance.save()
-        return (
-            super(ProfileDetailSerializer, self)
-            .update(instance, validated_data)
-        )
+        return super(ProfileDetailSerializer, self).update(instance, validated_data)
 
 
 class FollowUnfollowProfileSerializer(serializers.ModelSerializer):
@@ -145,11 +140,7 @@ class PostListSerializer(PostSerializer):
 
 
 class PostDetailSerializer(serializers.ModelSerializer):
-    likes = serializers.StringRelatedField(
-        many=True,
-        read_only=True,
-        required=False
-    )
+    likes = serializers.StringRelatedField(many=True, read_only=True, required=False)
     comments = CommentSerializer(many=True, read_only=True)
     hashtag = HashTagSerializer(many=True, required=False)
 
@@ -197,8 +188,6 @@ class LikeUnlikePostSerializer(PostDetailSerializer):
 
 
 class LikeSerializer(serializers.ModelSerializer):
-    # post = serializers.CharField(source="post.id", read_only=True)
-
     class Meta:
         model = Like
         fields = (
@@ -209,8 +198,6 @@ class LikeSerializer(serializers.ModelSerializer):
 
 
 class LikeDetailSerializer(LikeSerializer):
-    # post = PostDetailSerializer(many=False, read_only=True)
-
     class Meta:
         model = Like
         fields = ("id", "post", "date_created")
@@ -221,8 +208,6 @@ class LikeDetailSerializer(LikeSerializer):
 
 
 class CommentDetailSerializer(CommentSerializer):
-    # post = PostDetailSerializer(many=False, read_only=True)
-
     class Meta:
         model = Comment
         fields = ("id", "post", "content", "date_created")
